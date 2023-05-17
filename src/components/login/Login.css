@@ -1,0 +1,17 @@
+.submit-btn {
+    background: #05386b
+}
+
+.platform-content {
+    background: linear-gradient(to right, #ee7724, #d8363a, #dd3675, #b44593);
+}
+
+.bg-texture {
+    background: #05386b;
+    border-radius: 50%;
+}
+
+.text-logo{
+    width: 19rem;
+
+}
