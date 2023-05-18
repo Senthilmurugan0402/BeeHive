@@ -1,20 +1,25 @@
-import * as React from 'react';
-// import Backdrop from '@mui/material/Backdrop';
-// import CircularProgress from '@mui/material/CircularProgress';
-import { useAppStateAPI } from '../appData/AppStateAPI';
+import * as React from "react";
+import "../css/Loader.css";
+import { useAppStateAPI } from "../appData/AppStateAPI";
 
 const PreloaderBackdrop: React.FC = () => {
-    const { showPreloader } = useAppStateAPI();
+  const { showPreloader } = useAppStateAPI();
 
-    return (
-        <div>
-            {/* <Backdrop
-                sx={{ color: '#fff', zIndex:"9999" }}
-                open={showPreloader}
-            >
-                <CircularProgress color="inherit" />
-            </Backdrop> */}
+  return (
+    <div>
+      {showPreloader && (
+        <div className="overlay">
+          <div
+            className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] text-primary motion-reduce:animate-[spin_1.5s_linear_infinite]"
+            role="status"
+          >
+            <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
+              Loading...
+            </span>
+          </div>
         </div>
-    );
-}
+      )}
+    </div>
+  );
+};
 export default PreloaderBackdrop;
