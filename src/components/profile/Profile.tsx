@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import NavBar from "../../common/components/navigation/NavBar";
 import { APIData } from "../../common/appData/DataTypes";
 import { InitialData } from "../../common/appData/InitalValues";
