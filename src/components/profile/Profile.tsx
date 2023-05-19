@@ -189,8 +189,15 @@ const Profile: React.FC = () => {
                                   : "../../assets/images/noimage.png"
                               }
                             />
-                            <div className="p-4">
-                              <p className="text-gray-600">{post.postText}</p>
+                            <div
+                              className="p-4"
+                            >
+                              <p title={post.postText} style={{
+                                height: "42px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }} className="text-gray-600">{post.postText}</p>
                             </div>
                             <div className="text-base text-gray-500 text-left pr-3 pb-2 pl-2">
                               {post.postCreatedData}
