@@ -57,11 +57,11 @@ const Users: React.FC = () => {
           }
           return 0; // Maintain the existing order
         });
-        setShowPreloader(false);
         setUsers(users);
         setUsersList(users);
       }
     });
+    setShowPreloader(false);
   };
 
   const updateFollowers = async (
@@ -168,8 +168,7 @@ const Users: React.FC = () => {
                 </div>
               </div>
             </div>
-            {users &&
-              users.length > 0 &&
+            {users && users.length > 0 ? (
               users.map((user: any) => {
                 return (
                   <div className="shadow-xl mt-8 mr-0 mb-0 ml-0 pt-4 pr-10 pb-4 pl-10 flow-root rounded-lg sm:py-2 bg-white">
@@ -230,7 +229,12 @@ const Users: React.FC = () => {
                     </div>
                   </div>
                 );
-              })}
+              })
+            ) : (
+              <div className="text-center text-slate-500 text-xl pt-4">
+                No Users to show
+              </div>
+            )}
           </div>
         </div>
       </div>
