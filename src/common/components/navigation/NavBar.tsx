@@ -124,7 +124,6 @@ const NavBar: React.FC = () => {
                     data-te-nav-link-ref
                   >
                     <i className="fa fa-id-badge" aria-hidden="true"></i>&nbsp;
-                    Profile
                   </span>
                 </li>
                 <li
@@ -138,7 +137,6 @@ const NavBar: React.FC = () => {
                   {/* Logout link */}
                   <span className="text-slate-400 hover:text-white opacity-100 focus:text-white opacity-100 disabled:text-black/30 dark:text-neutral-200 dark:hover:text-neutral-300 dark:focus:text-neutral-300 lg:px-2 [&.active]:text-black/90 dark:[&.active]:text-zinc-400 cursor-pointer">
                     <i className="fa fa-sign-out" aria-hidden="true"></i>&nbsp;
-                    logout
                   </span>
                 </li>
               </ul>

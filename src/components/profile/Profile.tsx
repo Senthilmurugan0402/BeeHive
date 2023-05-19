@@ -10,23 +10,12 @@ import { toast } from "react-hot-toast";
 import { useAppStateAPI } from "../../common/appData/AppStateAPI";
 
 const Profile: React.FC = () => {
-  const navigate = useNavigate();
   const [profileDetails, setProfileDetails] = useState<any>(
     InitialData.userDetails
   );
   const [profilePicture, setProfilePicture] = useState<any>({});
   const { setShowPreloader } = useAppStateAPI();
   let documentId = localStorage.getItem("documentId");
-
-  const compareDatetime = (
-    a: APIData.UserPostDetails,
-    b: APIData.UserPostDetails
-  ) => {
-    const dateA: any = new Date(a.postCreatedData);
-    const dateB: any = new Date(b.postCreatedData);
-
-    return dateB - dateA;
-  };
 
   const getProfileDetails = async () => {
     if (documentId) {
@@ -39,11 +28,12 @@ const Profile: React.FC = () => {
         if (profileData) {
           let data = { ...profileData };
           // Sort the array by datetime
-          data.userPostData = data.userPostData.sort(
-            (a: APIData.UserPostDetails, b: APIData.UserPostDetails) =>
-              b.postCreatedData.localeCompare(a.postCreatedData)
-          );
-          console.log(data);
+          if (data.userPostData) {
+            data.userPostData = data.userPostData.sort(
+              (a: APIData.UserPostDetails, b: APIData.UserPostDetails) =>
+                b.postCreatedData.localeCompare(a.postCreatedData)
+            );
+          }
           setProfileDetails(data);
         }
       }
@@ -60,7 +50,6 @@ const Profile: React.FC = () => {
 
       // Get the download URL of the uploaded image
       const imageUrl = await imageRef.getDownloadURL();
-      console.log(imageUrl);
       const docRef = await firestore.collection("users").doc(documentId);
 
       docRef
@@ -203,13 +192,30 @@ const Profile: React.FC = () => {
                             <div className="p-4">
                               <p className="text-gray-600">{post.postText}</p>
                             </div>
+                            <div className="text-base text-gray-500 text-left pr-3 pb-2 pl-2">
+                              {post.postCreatedData}
+                            </div>
+                            <div className="text-base text-gray-500 text-right pr-3 pb-2">
+                              <i
+                                className="fa fa-thumbs-up text-apptheme"
+                                aria-hidden="true"
+                              >
+                                {post.postcomments.length > 0 && (
+                                  <span className="ml-2 inline-block whitespace-nowrap rounded-[0.27rem] bg-danger-100 px-[0.65em] pb-[0.25em] pt-[0.35em] text-center align-baseline text-[0.75em] font-bold leading-none text-danger-700">
+                                    {post.postcomments.length}
+                                  </span>
+                                )}
+                              </i>
+                            </div>
                           </div>
                         </div>
                       );
                     }
                   )
                 ) : (
-                  <p className="text-center">No Post Available</p>
+                  <div className="text-center text-slate-500 text-xl">
+                    No Post to show
+                  </div>
                 )}
               </div>
             </div>

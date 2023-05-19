@@ -74,10 +74,10 @@ const Login: React.FC = () => {
                   hashedPassword
                 );
 
-                console.log(passwordMatch);
                 if (passwordMatch == true) {
                   toast.success("Welcome" + " " + userName);
                   localStorage.setItem("documentId",documentId);
+                  localStorage.setItem("userName",userName);
                   setSubmitting(true);
                   navigate(PageLinks.HOME);
                 } else {

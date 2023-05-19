@@ -48,12 +48,11 @@ const Users: React.FC = () => {
               }
             }),
         });
-        console.log(users);
         users = users.sort((a, b) => {
-          if (a.followers.length >0 && b.followers.length ==0) {
+          if (a.followers.length > 0 && b.followers.length == 0) {
             return -1; // `a` comes before `b`
           }
-          if (a.followers.length ==0 && b.followers.length >0) {
+          if (a.followers.length == 0 && b.followers.length > 0) {
             return 1; // `b` comes before `a`
           }
           return 0; // Maintain the existing order
@@ -180,7 +179,7 @@ const Users: React.FC = () => {
                           <div className="flex items-center flex-1 min-w-0">
                             <img
                               src={
-                                user.userimage != "image_url"
+                                user.userimage != ""
                                   ? user.userimage
                                   : "../../assets/images/profile.png"
                               }

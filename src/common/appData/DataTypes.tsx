@@ -22,12 +22,19 @@ export namespace APIData {
     postImage: string;
     postText: string;
     postcomments: UserPostCommentDetails[];
-    postlikes: number;
+    postlikes: string[];
     postCreatedData: string;
   }
+
   export interface UserPostCommentDetails {
     userId: string;
     userPostcomment: string;
+    userPostcommentDatetime: string;
     userName: string;
+  }
+
+  export interface UserFollowers {
+    id: string;
+    display: string;
   }
 }

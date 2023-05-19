@@ -6,16 +6,100 @@ import { toast } from "react-hot-toast";
 import { useAppStateAPI } from "../../common/appData/AppStateAPI";
 import { APIData } from "../../common/appData/DataTypes";
 import moment from "moment";
+import { MentionsInput, Mention } from "react-mentions";
 
 const NewsFeed: React.FC = () => {
   const [image, setImage] = useState<File | null>(null);
   const [postText, setPostText] = useState("");
+  const [commentText, setCommentText] = useState<string[]>([]);
   const [postImageUrl, setPostImageUrl] = useState("");
+  const [selectedUser, setSelectedUser] = useState("");
+  const [userFollowers, setUserFollowers] = useState<APIData.UserFollowers[]>(
+    []
+  );
+  const [newsFeeds, setNewsFeeds] = useState<APIData.UserPostDetails[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setShowPreloader } = useAppStateAPI();
   let documentId = localStorage.getItem("documentId");
+  let userName = localStorage.getItem("userName");
 
-  const navigate = useNavigate();
+  const handlePostLike = (index: number, type: boolean, docId: string) => {
+    let updatedNewsFeed = [...newsFeeds];
+    let likedUsers = [];
+    if (updatedNewsFeed[index].postlikes.length > 0 && type == false) {
+      likedUsers = updatedNewsFeed[index].postlikes.filter(
+        (user) => user != docId
+      );
+      updatedNewsFeed[index].postlikes = likedUsers;
+    } else {
+      updatedNewsFeed[index].postlikes.push(docId);
+    }
+    setNewsFeeds(updatedNewsFeed);
+  };
+  const handlePostComments = (
+    index: number,
+    value: string,
+    docId: string,
+    name: string
+  ) => {
+    setCommentText([]);
+    let updatedNewsFeed = [...newsFeeds];
+    updatedNewsFeed[index].postcomments.push({
+      userId: docId,
+      userPostcomment: value,
+      userName: name,
+      userPostcommentDatetime: moment().format("MMMM Do YYYY, h:mm:ss a"),
+    });
+    setNewsFeeds(updatedNewsFeed);
+  };
+
+  const newsFeed = async () => {
+    let followers = [];
+    let followerData: APIData.UserFollowers[] = [];
+    let userPosts: APIData.UserPostDetails[] = [];
+    if (documentId) {
+      setShowPreloader(true);
+      const profileRef = firestore.collection("users").doc(documentId);
+      const profileSnapshot = await profileRef.get();
+
+      if (profileSnapshot.exists) {
+        const profileData = profileSnapshot.data();
+        if (profileData) {
+          followers = profileData["followers"];
+        }
+      }
+      if (followers) {
+        followers.map(async (follower: any) => {
+          followerData.push({
+            id: follower.docid,
+            display: follower.userName,
+          });
+          const profileRef = firestore.collection("users").doc(follower.docid);
+          const profileSnapshot = await profileRef.get();
+
+          if (profileSnapshot.exists) {
+            const profileData = profileSnapshot.data();
+            if (profileData) {
+              if (profileData["userPostData"]) {
+                profileData["userPostData"].map(
+                  (post: APIData.UserPostDetails) => {
+                    userPosts.push(post);
+                  }
+                );
+                userPosts.sort(
+                  (a: APIData.UserPostDetails, b: APIData.UserPostDetails) =>
+                    b.postCreatedData.localeCompare(a.postCreatedData)
+                );
+                setNewsFeeds(userPosts);
+              }
+            }
+          }
+        });
+        setUserFollowers(followerData);
+        setShowPreloader(false);
+      }
+    }
+  };
 
   const handleButtonClick = () => {
     if (fileInputRef.current) {
@@ -47,35 +131,35 @@ const NewsFeed: React.FC = () => {
       postImage: postImageUrl,
       postText: postText,
       postcomments: [],
-      postlikes: 0,
-      postCreatedData:moment().format('MMMM Do YYYY, h:mm:ss a'),
+      postlikes: [],
+      postCreatedData: moment().format("MMMM Do YYYY, h:mm:ss a"),
     };
-    let existingPostData:APIData.UserPostDetails[] = [];
-    let updateData:APIData.UserPostDetails[] = [];
+    let existingPostData: APIData.UserPostDetails[] = [];
+    let updateData: APIData.UserPostDetails[] = [];
+    let followers = [];
     if (documentId) {
       setShowPreloader(true);
       const profileRef = firestore.collection("users").doc(documentId);
       const profileSnapshot = await profileRef.get();
 
-        if (profileSnapshot.exists) {
-          const profileData = profileSnapshot.data();
-          if (profileData) {
-            existingPostData = profileData["userPostData"];
-          }
+      if (profileSnapshot.exists) {
+        const profileData = profileSnapshot.data();
+        if (profileData) {
+          existingPostData = profileData["userPostData"];
+          followers = profileData["followers"];
         }
-        if(existingPostData){
-          if(Array.isArray(existingPostData)){
-            existingPostData = existingPostData;
-          }else{
-            existingPostData = [existingPostData];
-          }
-        }else{
-          existingPostData = [];
+      }
+      if (existingPostData) {
+        if (Array.isArray(existingPostData)) {
+          existingPostData = existingPostData;
+        } else {
+          existingPostData = [existingPostData];
         }
-        console.log(existingPostData);
-        console.log(postData);
-        updateData = [...existingPostData];
-        updateData.push(postData);
+      } else {
+        existingPostData = [];
+      }
+      updateData = [...existingPostData];
+      updateData.push(postData);
       profileRef
         .update({
           userPostData: updateData,
@@ -93,9 +177,13 @@ const NewsFeed: React.FC = () => {
       setShowPreloader(false);
     }
   };
+
+  useEffect(() => {}, [selectedUser]);
   useEffect(() => {
+    newsFeed();
     initTE({ Collapse, Dropdown });
   }, []);
+
   return (
     <Fragment>
       <div
@@ -152,15 +240,32 @@ const NewsFeed: React.FC = () => {
                     </button>
                   )}
                 </div>
-                <textarea
-                  className="bg-gray-200 w-full rounded-lg shadow border p-2"
-                  rows={5}
-                  value={postText}
-                  placeholder="Speak your mind"
-                  onChange={(e: any) => {
-                    setPostText(e.target.value);
-                  }}
-                ></textarea>
+                <div style={{ marginTop: "50px" }}>
+                  <MentionsInput
+                    style={{ height: "150px" }}
+                    className="bg-gray-200 w-full rounded-lg shadow border p-2"
+                    value={postText}
+                    onChange={(e: any) => {
+                      setPostText(e.target.value);
+                    }}
+                    placeholder="Speak your mind Type '@' to mention a user"
+                  >
+                    <Mention
+                      markup="__display__,"
+                      trigger="@"
+                      data={userFollowers}
+                      renderSuggestion={(user, search) => (
+                        <span>{user.display}</span>
+                      )}
+                      onAdd={(id, display) => {
+                        const selectedUser: any = userFollowers.find(
+                          (user) => user.id === id
+                        );
+                        setSelectedUser(selectedUser?.display);
+                      }}
+                    />
+                  </MentionsInput>
+                </div>
 
                 <div className="w-full flex flex-row flex-wrap mt-3">
                   <div className="w-3/3">
@@ -182,97 +287,142 @@ const NewsFeed: React.FC = () => {
               </div>
 
               <div className="mt-3 flex flex-col">
-                <div className="bg-white mt-3">
-                  <img
-                    className="border rounded-t-lg shadow-lg "
-                    src="https://images.unsplash.com/photo-1572817519612-d8fadd929b00?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1950&q=80"
-                  />
-                  <div className="bg-white border shadow p-5 text-xl text-gray-700 font-semibold">
-                    A Pretty Cool photo from the mountains. Image credit to
-                    @danielmirlea on Unsplash.
-                  </div>
-                  <div className="bg-white p-1 border shadow flex flex-row flex-wrap">
-                    <div className="w-1/2 hover:bg-gray-200 text-center text-xl text-gray-700 font-semibold">
-                      Like
-                    </div>
-                    <div className="w-1/2 hover:bg-gray-200 border-l-4 text-center text-xl text-gray-700 font-semibold">
-                      Comment
-                    </div>
-                  </div>
-
-                  <div className="bg-white border-4 bg-gray-300 border-white rounded-b-lg shadow p-5 text-xl text-gray-700 content-center font-semibold flex flex-row flex-wrap">
-                    <div className="w-full">
-                      <div className="w-full text-left text-xl text-gray-600">
-                        @Some Person
-                      </div>
-                      A Pretty Cool photo from the mountains. Image credit to
-                      @danielmirlea on Unsplash. A Pretty Cool photo from the
-                      mountains. Image credit to @danielmirlea on Unsplash.
-                    </div>
-                    <section className="w-full text-left text-xl text-gray-600 py-8">
-                      <div className="w-full">
-                        <form className="mb-6 w-full">
-                          <div className="py-2 px-4 mb-4 bg-white rounded-lg rounded-t-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                            <label htmlFor="comment" className="sr-only">
-                              Your comment
-                            </label>
-                            <textarea
-                              id="comment"
-                              rows={6}
-                              className="px-0 w-full text-sm text-gray-900 border-0 focus:ring-0 focus:outline-none dark:text-white dark:placeholder-gray-400 dark:bg-gray-800"
-                              placeholder="Write a comment..."
-                              required
-                            ></textarea>
+                {newsFeeds && newsFeeds.length > 0 ? (
+                  newsFeeds.map(
+                    (
+                      newsfeed: APIData.UserPostDetails,
+                      newsFeedIndex: number
+                    ) => {
+                      return (
+                        <div className="bg-white mt-3">
+                          {newsfeed.postImage && (
+                            <img
+                              className="border rounded-t-lg shadow-lg "
+                              src={newsfeed.postImage}
+                            />
+                          )}
+                          <div className="text-base text-gray-500 text-right pr-3 pb-2">
+                            {newsfeed.postCreatedData}
                           </div>
-                          <button
-                            type="submit"
-                            className="inline-flex items-center py-2.5 px-4 text-xs font-medium text-center text-white bg-primary-700 rounded-lg focus:ring-4 focus:ring-primary-200 dark:focus:ring-primary-900 hover:bg-primary-800"
+                          {newsfeed.postText && (
+                            <div className="bg-white border shadow p-5 text-xl text-gray-700 font-semibold">
+                              {newsfeed.postText}
+                            </div>
+                          )}
+                          <div
+                            className="bg-white p-1 border shadow flex flex-row flex-wrap cursor-pointer"
+                            onClick={(e: any) => {
+                              e.preventDefault();
+                              if (newsfeed.postlikes.includes(documentId!)) {
+                                handlePostLike(
+                                  newsFeedIndex,
+                                  false,
+                                  documentId!
+                                );
+                              } else {
+                                handlePostLike(
+                                  newsFeedIndex,
+                                  true,
+                                  documentId!
+                                );
+                              }
+                            }}
                           >
-                            Post comment
-                          </button>
-                        </form>
-                      </div>
-                    </section>
-                  </div>
-                </div>
+                            <div
+                              className={
+                                newsfeed.postlikes.length > 0 &&
+                                newsfeed.postlikes.includes(documentId!)
+                                  ? "w-1/2 hover:bg-gray-200 text-center text-xl text-apptheme font-semibold bg-gray-200"
+                                  : "w-1/2 hover:bg-gray-200 text-center text-xl text-gray font-semibold"
+                              }
+                            >
+                              Like
+                            </div>
+                            <div className="w-1/2 hover:bg-gray-200 border-l-4 text-center text-xl text-gray-700 font-semibold">
+                              Comment
+                            </div>
+                          </div>
 
-                <div className="bg-white mt-3">
-                  <img
-                    className="border rounded-t-lg shadow-lg "
-                    src="https://images.unsplash.com/photo-1572817519612-d8fadd929b00?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1950&q=80"
-                  />
-                  <div className="bg-white border shadow p-5 text-xl text-gray-700 font-semibold">
-                    A Pretty Cool photo from the mountains. Image credit to
-                    @danielmirlea on Unsplash.
+                          <div className="bg-white border-4 bg-gray-300 border-white rounded-b-lg shadow p-5 text-xl text-gray-700 content-center font-semibold flex flex-row flex-wrap">
+                            {newsfeed.postcomments &&
+                              newsfeed.postcomments.length > 0 &&
+                              newsfeed.postcomments.map(
+                                (comment: APIData.UserPostCommentDetails) => {
+                                  return (
+                                    <div className="w-full">
+                                      <div className="w-full text-left text-xl text-gray-600">
+                                        <span className="inline-block whitespace-nowrap rounded-[0.27rem] bg-success-100 px-[0.65em] pb-[0.25em] pt-[0.35em] text-center align-baseline text-[0.75em] font-bold leading-none text-success-700">
+                                          {comment.userName}
+                                        </span>
+                                        <div className="text-base text-gray-500 text-left pr-3 pb-2 pl-2">
+                                          {comment.userPostcommentDatetime}
+                                        </div>
+                                      </div>
+                                      {comment.userPostcomment}
+                                    </div>
+                                  );
+                                }
+                              )}
+                            <section className="w-full text-left text-xl text-gray-600 py-8">
+                              <div className="w-full">
+                                <form
+                                  className="mb-6 w-full"
+                                  onSubmit={(e: any) => {
+                                    e.preventDefault();
+                                    e.target.reset();
+                                  }}
+                                >
+                                  <div className="py-2 px-4 mb-4 bg-white rounded-lg rounded-t-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                                    <label
+                                      htmlFor="comment"
+                                      className="sr-only"
+                                    >
+                                      Your comment
+                                    </label>
+                                    <textarea
+                                      id="comment"
+                                      value={commentText[newsFeedIndex]}
+                                      rows={6}
+                                      className="px-0 w-full text-sm text-gray-900 border-0 focus:ring-0 focus:outline-none dark:text-white dark:placeholder-gray-400 dark:bg-gray-800"
+                                      placeholder="Write a comment..."
+                                      onChange={(e: any) => {
+                                        let commentPostText = commentText;
+                                        commentPostText[newsFeedIndex] =
+                                          e.target.value;
+                                        setCommentText(commentPostText);
+                                      }}
+                                    ></textarea>
+                                  </div>
+                                  <button
+                                    type="submit"
+                                    onClick={(e: any) => {
+                                      handlePostComments(
+                                        newsFeedIndex,
+                                        commentText[newsFeedIndex],
+                                        documentId!,
+                                        userName!
+                                      );
+                                      let commentPostText = commentText;
+                                      commentPostText.splice(newsFeedIndex, 1);
+                                      setCommentText(commentPostText);
+                                    }}
+                                    className="inline-flex items-center py-2.5 px-4 text-xs font-medium text-center text-white bg-primary-700 rounded-lg focus:ring-4 focus:ring-primary-200 dark:focus:ring-primary-900 hover:bg-primary-800"
+                                  >
+                                    Post comment
+                                  </button>
+                                </form>
+                              </div>
+                            </section>
+                          </div>
+                        </div>
+                      );
+                    }
+                  )
+                ) : (
+                  <div className="text-center text-slate-500 text-xl">
+                    No Post to show
                   </div>
-                  <div className="bg-white p-1 rounded-b-lg border shadow flex flex-row flex-wrap">
-                    <div className="w-1/2 hover:bg-gray-200 text-center text-xl text-gray-700 font-semibold">
-                      Like
-                    </div>
-                    <div className="w-1/2 hover:bg-gray-200 border-l-4 text-center text-xl text-gray-700 font-semibold">
-                      Comment
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white mt-3">
-                  <img
-                    className="border rounded-t-lg shadow-lg "
-                    src="https://images.unsplash.com/photo-1572817519612-d8fadd929b00?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1950&q=80"
-                  />
-                  <div className="bg-white border shadow p-5 text-xl text-gray-700 font-semibold">
-                    A Pretty Cool photo from the mountains. Image credit to
-                    @danielmirlea on Unsplash.
-                  </div>
-                  <div className="bg-white p-1 rounded-b-lg border shadow flex flex-row flex-wrap">
-                    <div className="w-1/2 hover:bg-gray-200 text-center text-xl text-gray-700 font-semibold">
-                      Like
-                    </div>
-                    <div className="w-1/2 hover:bg-gray-200 border-l-4 text-center text-xl text-gray-700 font-semibold">
-                      Comment
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
