@@ -8,7 +8,6 @@ const AppStateContext = createContext(initialState);
 
 export const StateActionTypes = {
     SET_SHOW_PRELOADER: "SET_SHOW_PRELOADER",
-    SET_LOGIN: "SET_LOGIN",
 }
 
 const reducer = (state = initialState, action) => {
@@ -16,10 +15,6 @@ const reducer = (state = initialState, action) => {
         case StateActionTypes.SET_SHOW_PRELOADER:
             return {
                 ...state, showPreloader: action.showPreloader
-            }
-        case StateActionTypes.SET_LOGIN:
-            return {
-                ...state, login: action.login
             }
         default:
             throw new Error(`Unhandled action type: ${action.type}`);

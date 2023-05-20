@@ -23,40 +23,61 @@ const NewsFeed: React.FC = () => {
   let documentId = localStorage.getItem("documentId");
   let userName = localStorage.getItem("userName");
 
-  const handlePostLike = (index: number, type: boolean, docId: string) => {
-    let updatedNewsFeed = [...newsFeeds];
+  const handlePostLike = (type: boolean, docId: string, postdocid: string) => {
+    let updatedNewsFeed: APIData.UserPostDetails[] = [...newsFeeds];
     let likedUsers = [];
-    if (updatedNewsFeed[index].postlikes.length > 0 && type == false) {
-      likedUsers = updatedNewsFeed[index].postlikes.filter(
-        (user) => user != docId
-      );
-      updatedNewsFeed[index].postlikes = likedUsers;
+    let feedData = updatedNewsFeed.filter(
+      (feed) => feed.postdocid == postdocid
+    );
+    if (feedData[0] && feedData[0].postlikes.length > 0 && type == false) {
+      likedUsers = feedData[0].postlikes.filter((user) => user != docId);
+      feedData[0].postlikes = likedUsers;
     } else {
-      updatedNewsFeed[index].postlikes.push(docId);
+      feedData[0].postlikes.push(docId);
     }
     setNewsFeeds(updatedNewsFeed);
+    setShowPreloader(true);
+    const userPostCollectionRef = firestore.collection("userposts");
+    userPostCollectionRef
+      .doc(postdocid)
+      .update(feedData[0])
+      .then(() => {
+        setShowPreloader(false);
+      });
   };
+
   const handlePostComments = (
-    index: number,
     value: string,
     docId: string,
-    name: string
+    name: string,
+    postdocid: string
   ) => {
     setCommentText([]);
     let updatedNewsFeed = [...newsFeeds];
-    updatedNewsFeed[index].postcomments.push({
+    let feedData = updatedNewsFeed.filter(
+      (feed) => feed.postdocid == postdocid
+    );
+    feedData[0].postcomments.push({
       userId: docId,
       userPostcomment: value,
       userName: name,
       userPostcommentDatetime: moment().format("MMMM Do YYYY, h:mm:ss a"),
     });
     setNewsFeeds(updatedNewsFeed);
+    setShowPreloader(true);
+    const userPostCollectionRef = firestore.collection("userposts");
+    userPostCollectionRef
+      .doc(postdocid)
+      .update(feedData[0])
+      .then(() => {
+        setShowPreloader(false);
+      });
   };
 
   const newsFeed = async () => {
     let followers = [];
     let followerData: APIData.UserFollowers[] = [];
-    let userPosts: APIData.UserPostDetails[] = [];
+    let userPosts: any[] = [];
     if (documentId) {
       setShowPreloader(true);
       const profileRef = firestore.collection("users").doc(documentId);
@@ -74,26 +95,30 @@ const NewsFeed: React.FC = () => {
             id: follower.docid,
             display: follower.userName,
           });
-          const profileRef = firestore.collection("users").doc(follower.docid);
-          const profileSnapshot = await profileRef.get();
+          const userPostCollectionRef = firestore.collection("userposts");
+          const query = userPostCollectionRef.where(
+            "userId",
+            "==",
+            follower.docid
+          );
 
-          if (profileSnapshot.exists) {
-            const profileData = profileSnapshot.data();
-            if (profileData) {
-              if (profileData["userPostData"]) {
-                profileData["userPostData"].map(
-                  (post: APIData.UserPostDetails) => {
-                    userPosts.push(post);
-                  }
-                );
-                userPosts.sort(
-                  (a: APIData.UserPostDetails, b: APIData.UserPostDetails) =>
-                    b.postCreatedData.localeCompare(a.postCreatedData)
-                );
-                setNewsFeeds(userPosts);
-              }
-            }
-          }
+          query
+            .get()
+            .then((querySnapshot) => {
+              querySnapshot.forEach((doc) => {
+                let post = doc.data();
+                post["postdocid"] = doc.id;
+                userPosts.push(post);
+              });
+              userPosts.sort(
+                (a: APIData.UserPostDetails, b: APIData.UserPostDetails) =>
+                  b.postCreatedData.localeCompare(a.postCreatedData)
+              );
+              setNewsFeeds(userPosts);
+            })
+            .catch((error) => {
+              console.log("Error getting documents: ", error);
+            });
         });
         setUserFollowers(followerData);
         setShowPreloader(false);
@@ -133,38 +158,16 @@ const NewsFeed: React.FC = () => {
       postcomments: [],
       postlikes: [],
       postCreatedData: moment().format("MMMM Do YYYY, h:mm:ss a"),
+      userId: documentId!,
     };
     let existingPostData: APIData.UserPostDetails[] = [];
     let updateData: APIData.UserPostDetails[] = [];
     let followers = [];
     if (documentId) {
       setShowPreloader(true);
-      const profileRef = firestore.collection("users").doc(documentId);
-      const profileSnapshot = await profileRef.get();
-
-      if (profileSnapshot.exists) {
-        const profileData = profileSnapshot.data();
-        if (profileData) {
-          existingPostData = profileData["userPostData"];
-          followers = profileData["followers"];
-        }
-      }
-      if (existingPostData) {
-        if (Array.isArray(existingPostData)) {
-          existingPostData = existingPostData;
-        } else {
-          existingPostData = [existingPostData];
-        }
-      } else {
-        existingPostData = [];
-      }
-      updateData = [...existingPostData];
-      updateData.push(postData);
-      profileRef
-        .update({
-          userPostData: updateData,
-          // update more fields as needed
-        })
+      const docRef = await firestore
+        .collection("userposts")
+        .add(postData)
         .then(() => {
           toast.success("Post Added Successfully");
           setImage(null);
@@ -315,15 +318,15 @@ const NewsFeed: React.FC = () => {
                               e.preventDefault();
                               if (newsfeed.postlikes.includes(documentId!)) {
                                 handlePostLike(
-                                  newsFeedIndex,
                                   false,
-                                  documentId!
+                                  documentId!,
+                                  newsfeed.postdocid!
                                 );
                               } else {
                                 handlePostLike(
-                                  newsFeedIndex,
                                   true,
-                                  documentId!
+                                  documentId!,
+                                  newsfeed.postdocid!
                                 );
                               }
                             }}
@@ -397,10 +400,10 @@ const NewsFeed: React.FC = () => {
                                     type="submit"
                                     onClick={(e: any) => {
                                       handlePostComments(
-                                        newsFeedIndex,
                                         commentText[newsFeedIndex],
                                         documentId!,
-                                        userName!
+                                        userName!,
+                                        newsfeed.postdocid!
                                       );
                                       let commentPostText = commentText;
                                       commentPostText.splice(newsFeedIndex, 1);

@@ -7,7 +7,6 @@ import Register from "../../components/register/Register";
 import Home from "../../components/home/Home";
 import Users from "../../components/user/Users";
 import Profile from "../../components/profile/Profile";
-import Notification from "../../components/notifications/Notification";
 
 const AppNavigate: React.FC = () => {
 
@@ -23,7 +22,6 @@ const AppNavigate: React.FC = () => {
                     <Route path={PageLinks.LOGIN} element={<Login />} />
                     <Route path={PageLinks.USERS} element={<Users />} />
                     <Route path={PageLinks.PROFILE} element={<Profile />} />
-                    <Route path={PageLinks.NOTIFICATION} element={<Notification />} />
                     <Route path="/" element={<Navigate to={PageLinks.LOGIN} />} />
                 </Routes>
         </Router>

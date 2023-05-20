@@ -7,7 +7,6 @@ export namespace APIData {
     usermobile: string;
     userpwd: string;
     userabout: string;
-    userPostData: UserPostDetails[];
     createdat?: string;
     followers: string[];
     confirmuserpwd?: string;
@@ -24,6 +23,8 @@ export namespace APIData {
     postcomments: UserPostCommentDetails[];
     postlikes: string[];
     postCreatedData: string;
+    userId: string;
+    postdocid?:string
   }
 
   export interface UserPostCommentDetails {

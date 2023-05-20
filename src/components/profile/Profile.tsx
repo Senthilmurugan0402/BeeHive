@@ -14,6 +14,7 @@ const Profile: React.FC = () => {
   );
   const [profilePicture, setProfilePicture] = useState<any>({});
   const { setShowPreloader } = useAppStateAPI();
+  const [userPosts, setUserPosts] = useState<APIData.UserPostDetails[]>([]);
   let documentId = localStorage.getItem("documentId");
 
   const getProfileDetails = async () => {
@@ -26,14 +27,27 @@ const Profile: React.FC = () => {
         const profileData = profileSnapshot.data();
         if (profileData) {
           let data = { ...profileData };
-          // Sort the array by datetime
-          if (data.userPostData) {
-            data.userPostData = data.userPostData.sort(
-              (a: APIData.UserPostDetails, b: APIData.UserPostDetails) =>
-                b.postCreatedData.localeCompare(a.postCreatedData)
-            );
-          }
           setProfileDetails(data);
+          const userPostCollectionRef = firestore.collection("userposts");
+          const query = userPostCollectionRef.where("userId", "==", documentId);
+
+          query
+            .get()
+            .then((querySnapshot) => {
+              let postData: APIData.UserPostDetails[] = [];
+              querySnapshot.forEach((doc) => {
+                let post: any = doc.data();
+                postData.push(post);
+              });
+              postData.sort(
+                (a: APIData.UserPostDetails, b: APIData.UserPostDetails) =>
+                b.postCreatedData.localeCompare(a.postCreatedData)
+                );
+              setUserPosts(postData);
+            })
+            .catch((error) => {
+              console.log("Error getting documents: ", error);
+            });
         }
       }
       setShowPreloader(false);
@@ -173,51 +187,52 @@ const Profile: React.FC = () => {
             <h4 className="text-xl text-gray-900 font-bold">Posts</h4>
             <div className="container mx-auto py-8">
               <div className="flex flex-wrap -mx-4">
-                {profileDetails.userPostData &&
-                profileDetails.userPostData.length > 0 ? (
-                  profileDetails.userPostData.map(
-                    (post: APIData.UserPostDetails) => {
-                      return (
-                        <div className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/4 p-4">
-                          <div className="bg-white rounded-lg shadow-lg">
-                            <img
-                              className="w-full h-40 object-cover rounded-t-lg"
-                              src={
-                                post.postImage
-                                  ? post.postImage
-                                  : "../../assets/images/noimage.png"
-                              }
-                            />
-                            <div
-                              className="p-4"
-                            >
-                              <p title={post.postText} style={{
+                {userPosts && userPosts.length > 0 ? (
+                  userPosts.map((post: APIData.UserPostDetails) => {
+                    return (
+                      <div className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/4 p-4">
+                        <div className="bg-white rounded-lg shadow-lg">
+                          <img
+                            className="w-full h-40 object-cover rounded-t-lg"
+                            src={
+                              post.postImage
+                                ? post.postImage
+                                : "../../assets/images/noimage.png"
+                            }
+                          />
+                          <div className="p-4">
+                            <p
+                              title={post.postText}
+                              style={{
                                 height: "42px",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
                                 whiteSpace: "nowrap",
-                              }} className="text-gray-600">{post.postText}</p>
-                            </div>
-                            <div className="text-base text-gray-500 text-left pr-3 pb-2 pl-2">
-                              {post.postCreatedData}
-                            </div>
-                            <div className="text-base text-gray-500 text-right pr-3 pb-2">
-                              <i
-                                className="fa fa-thumbs-up text-apptheme"
-                                aria-hidden="true"
-                              >
-                                {post.postcomments.length > 0 && (
-                                  <span className="ml-2 inline-block whitespace-nowrap rounded-[0.27rem] bg-danger-100 px-[0.65em] pb-[0.25em] pt-[0.35em] text-center align-baseline text-[0.75em] font-bold leading-none text-danger-700">
-                                    {post.postcomments.length}
-                                  </span>
-                                )}
-                              </i>
-                            </div>
+                              }}
+                              className="text-gray-600"
+                            >
+                              {post.postText}
+                            </p>
+                          </div>
+                          <div className="text-base text-gray-500 text-left pr-3 pb-2 pl-2">
+                            {post.postCreatedData}
+                          </div>
+                          <div className="text-base text-gray-500 text-right pr-3 pb-2">
+                            <i
+                              className="fa fa-thumbs-up text-apptheme"
+                              aria-hidden="true"
+                            >
+                              {post.postlikes.length > 0 && (
+                                <span className="ml-2 inline-block whitespace-nowrap rounded-[0.27rem] bg-danger-100 px-[0.65em] pb-[0.25em] pt-[0.35em] text-center align-baseline text-[0.75em] font-bold leading-none text-danger-700">
+                                  {post.postlikes.length}
+                                </span>
+                              )}
+                            </i>
                           </div>
                         </div>
-                      );
-                    }
-                  )
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="text-center text-slate-500 text-xl">
                     No Post to show

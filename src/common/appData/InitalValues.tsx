@@ -10,7 +10,6 @@ export namespace InitialData {
     usermobile: "",
     userabout: "",
     userpwd: "",
-    userPostData: [],
     createdat: "",
     followers: [],
     confirmuserpwd: "",
